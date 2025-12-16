@@ -5,7 +5,7 @@ trigger:
 variables:
   # CONFIGURACIÓN DE TU ENTORNO
   acrName: 'microsdnhubacr' 
-  azureServiceConnection: 'Azure-Conn-AKS-DAVID' 
+  azureServiceConnection: 'Azure-Conn-AKS-DAVID' # Nombre de tu conexión de servicio
   aksResourceGroup: 'RG-Microservicios-NET' 
   aksClusterName: 'aks-dotnethub' 
 
@@ -26,14 +26,21 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     
-    # 1. Login y Push a ACR
+    # 1A. Login explícito al ACR (Solución a los errores 'Unexpected property' en Docker)
+    - task: Docker@2
+      displayName: Login to Azure Container Registry
+      inputs:
+        command: login
+        azureSubscription: $(azureServiceConnection)
+        azureContainerRegistry: 'microsdnhubacr.azurecr.io'
+    
+    # 1B. Build y Push. Ya no necesita la conexión, pues ya hicimos login.
     - task: Docker@2
       displayName: Build and push image to ACR
       inputs:
         command: buildAndPush
         repository: $(imageRepository)
         dockerfile: $(dockerfilePath)
-        containerRegistry: $(azureServiceConnection) 
         tags: |
           $(Build.BuildId)
 
@@ -53,16 +60,15 @@ stages:
         deploy:
           steps:
           
-          # 2. Aplicar Manifiesto de Kubernetes
+          # 2. Aplicar Manifiesto de Kubernetes (Solución a los errores 'Unexpected property' en Kubernetes)
           - task: KubernetesManifest@1
             displayName: Deploy to AKS
             inputs:
               action: 'deploy'
               connectionType: 'azureResourceManager'
-              # Usamos el endpoint de la conexión de servicio (sustituye azureSubscription)
-              azureSubscriptionEndpoint: $(azureServiceConnection) 
-              # Usamos el nombre del clúster AKS (sustituye resourceGroupName y clusterName)
-              kubernetesCluster: $(aksClusterName) 
+              
+              azureSubscriptionEndpoint: $(azureServiceConnection) # Usa el endpoint de la conexión de Azure
+              kubernetesCluster: $(aksClusterName)                 # Usa solo el nombre del clúster
               
               manifests: |
                 $(System.DefaultWorkingDirectory)/$(deploymentYamlPath)
