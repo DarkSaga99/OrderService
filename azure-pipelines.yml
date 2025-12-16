@@ -1,0 +1,79 @@
+# azure-pipelines-order-service.yml
+trigger:
+- main
+
+variables:
+  # CONFIGURACIÓN DE TU ENTORNO
+  acrName: 'microsdnhubacr' 
+  azureServiceConnection: 'Azure-Conn-AKS-DAVID' # Nombre de tu conexión de servicio
+  aksResourceGroup: 'RG-Microservicios-NET' 
+  aksClusterName: 'aks-dotnethub' 
+
+  # CONFIGURACIÓN DEL SERVICIO (Order Service)
+  imageRepository: 'orderservice'
+  dockerfilePath: 'Orders.Api/Dockerfile'
+  deploymentYamlPath: 'aks-deployment-order.yaml' 
+
+# ----------------------------------------------------
+# 1. Etapa de CI: Construir y Subir Imagen a ACR
+# ----------------------------------------------------
+stages:
+- stage: BuildAndPush
+  displayName: 1. Build and Push Docker Image
+  jobs:
+  - job: Build
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    
+    # 1A. Login explícito al ACR (Solución a los errores 'Unexpected property' en Docker)
+    - task: Docker@2
+      displayName: Login to Azure Container Registry
+      inputs:
+        command: login
+        azureSubscription: $(azureServiceConnection)
+        azureContainerRegistry: 'microsdnhubacr.azurecr.io'
+    
+    # 1B. Build y Push. Ya no necesita la conexión, pues ya hicimos login.
+    - task: Docker@2
+      displayName: Build and push image to ACR
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        tags: |
+          $(Build.BuildId)
+
+# ----------------------------------------------------
+# 2. Etapa de CD: Desplegar a AKS
+# ----------------------------------------------------
+- stage: Deploy
+  displayName: 2. Deploy to AKS
+  dependsOn: BuildAndPush
+  jobs:
+  - deployment: DeployJob
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'AKS-Deployment-Env'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          
+          # 2. Aplicar Manifiesto de Kubernetes (Solución a los errores 'Unexpected property' en Kubernetes)
+          - task: KubernetesManifest@1
+            displayName: Deploy to AKS
+            inputs:
+              action: 'deploy'
+              connectionType: 'azureResourceManager'
+              
+              azureSubscriptionEndpoint: $(azureServiceConnection) # Usa el endpoint de la conexión de Azure
+              kubernetesCluster: $(aksClusterName)                 # Usa solo el nombre del clúster
+              
+              manifests: |
+                $(System.DefaultWorkingDirectory)/$(deploymentYamlPath)
+              
+              containers: |
+                $(acrName).azurecr.io/$(imageRepository):$(Build.BuildId)
+              
+              imagePullSecrets: 'azurecrsecret'
