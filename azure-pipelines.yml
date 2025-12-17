@@ -8,7 +8,7 @@ variables:
   azureServiceConnection: 'Azure-Conn-AKS-DAVID'
 
   imageRepository: 'orderservice'
-  dockerfilePath: 'Orders.Api/Dockerfile'
+  dockerfilePath: $(System.DefaultWorkingDirectory)/Orders.Api/Dockerfile
   deploymentYamlPath: 'aks-deployment-order.yaml'
 
 stages:
@@ -29,6 +29,7 @@ stages:
         containerRegistry: $(acrServiceConnection)
         repository: $(imageRepository)
         dockerfile: $(dockerfilePath)
+        buildContext: $(System.DefaultWorkingDirectory)
         tags: |
           $(Build.BuildId)
 
@@ -47,14 +48,16 @@ stages:
       runOnce:
         deploy:
           steps:
+          - checkout: self  #
           - task: KubernetesManifest@1
             displayName: Deploy to AKS
             inputs:
               action: deploy
               connectionType: azureResourceManager
               azureSubscriptionEndpoint: $(azureServiceConnection)
+              azureResourceGroup: RG-Microservicios-NET
               kubernetesCluster: aks-dotnethub
               manifests: |
-                $(System.DefaultWorkingDirectory)/$(deploymentYamlPath)
+                $(System.DefaultWorkingDirectory)/aks-deployment-order.yaml
               containers: |
                 $(acrName).azurecr.io/$(imageRepository):$(Build.BuildId)
