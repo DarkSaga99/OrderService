@@ -20,7 +20,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<OrdersDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// Registro de servicios de Repositorio y Saga (Patrón Saga)
+// Registro de servicios de Repositorio y Saga (Patrón Saga) ok
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<CreateOrderSaga>();
 
