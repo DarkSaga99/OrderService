@@ -48,6 +48,7 @@ stages:
       runOnce:
         deploy:
           steps:
+          - checkout: self  #
           - task: KubernetesManifest@1
             displayName: Deploy to AKS
             inputs:
@@ -57,6 +58,6 @@ stages:
               azureResourceGroup: RG-Microservicios-NET
               kubernetesCluster: aks-dotnethub
               manifests: |
-                aks-deployment-order.yaml
+                $(System.DefaultWorkingDirectory)/aks-deployment-order.yaml
               containers: |
                 $(acrName).azurecr.io/$(imageRepository):$(Build.BuildId)
