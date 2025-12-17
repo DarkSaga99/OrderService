@@ -54,6 +54,7 @@ stages:
               action: deploy
               connectionType: azureResourceManager
               azureSubscriptionEndpoint: $(azureServiceConnection)
+              azureResourceGroup: RG-Microservicios-NET
               kubernetesCluster: aks-dotnethub
               manifests: |
                 $(System.DefaultWorkingDirectory)/$(deploymentYamlPath)
