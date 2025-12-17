@@ -57,6 +57,6 @@ stages:
               azureResourceGroup: RG-Microservicios-NET
               kubernetesCluster: aks-dotnethub
               manifests: |
-                $(System.DefaultWorkingDirectory)/aks-deployment-order.yaml
+                aks-deployment-order.yaml
               containers: |
                 $(acrName).azurecr.io/$(imageRepository):$(Build.BuildId)
