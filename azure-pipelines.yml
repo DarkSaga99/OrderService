@@ -8,7 +8,7 @@ variables:
   azureServiceConnection: 'Azure-Conn-AKS-DAVID'
 
   imageRepository: 'orderservice'
-  dockerfilePath: 'Orders.Api/Dockerfile'
+  dockerfilePath: $(System.DefaultWorkingDirectory)/Orders.Api/Dockerfile
   deploymentYamlPath: 'aks-deployment-order.yaml'
 
 stages:
@@ -28,7 +28,7 @@ stages:
         command: buildAndPush
         containerRegistry: $(acrServiceConnection)
         repository: $(imageRepository)
-        dockerfile: .
+        dockerfile: $(System.DefaultWorkingDirectory)
         tags: |
           $(Build.BuildId)
 
