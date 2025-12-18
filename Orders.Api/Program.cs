@@ -48,15 +48,15 @@ var app = builder.Build();
 
 
 // 2. Middlewares (La parte que hace funcionar la interfaz de Swagger)
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     // La clave es asegurar que el cliente de la UI sepa dónde buscar el JSON de Swagger
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Orders API V1");
     });
-}
+//}
 // else { app.UseExceptionHandler("/Error"); } // Recomendado para producción
 
 // app.UseHttpsRedirection(); // Puedes añadir esto si quieres forzar HTTPS
