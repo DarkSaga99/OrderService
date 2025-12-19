@@ -1,63 +1,34 @@
-# azure-pipelines-order-service.yml
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
 trigger:
 - main
 
+pool:
+  vmImage: 'windows-latest'
+
 variables:
-  acrName: 'microsdnhubacr'
-  acrServiceConnection: 'acr-microsdnhubacr'
-  azureServiceConnection: 'Azure-Conn-AKS-DAVID'
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
 
-  imageRepository: 'orderservice'
-  dockerfilePath: $(System.DefaultWorkingDirectory)/Orders.Api/Dockerfile
-  deploymentYamlPath: 'aks-deployment-order.yaml'
+steps:
+- task: NuGetToolInstaller@1
 
-stages:
-# ----------------------------------------------------
-# 1. CI - Build & Push a ACR
-# ----------------------------------------------------
-- stage: BuildAndPush
-  displayName: 1. Build and Push Image
-  jobs:
-  - job: Build
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - task: Docker@2
-      displayName: Build and Push to ACR
-      inputs:
-        command: buildAndPush
-        containerRegistry: $(acrServiceConnection)
-        repository: $(imageRepository)
-        dockerfile: $(dockerfilePath)
-        buildContext: $(System.DefaultWorkingDirectory)
-        tags: |
-          $(Build.BuildId)
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
 
-# ----------------------------------------------------
-# 2. CD - Deploy a AKS
-# ----------------------------------------------------
-- stage: Deploy
-  displayName: 2. Deploy to AKS
-  dependsOn: BuildAndPush
-  jobs:
-  - deployment: DeployJob
-    pool:
-      vmImage: 'ubuntu-latest'
-    environment: 'AKS-Deployment-Env'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self  #
-          - task: KubernetesManifest@1
-            displayName: Deploy to AKS
-            inputs:
-              action: deploy
-              connectionType: azureResourceManager
-              azureSubscriptionEndpoint: $(azureServiceConnection)
-              azureResourceGroup: RG-Microservicios-NET
-              kubernetesCluster: aks-dotnethub
-              manifests: |
-                $(System.DefaultWorkingDirectory)/aks-deployment-order.yaml
-              containers: |
-                $(acrName).azurecr.io/$(imageRepository):$(Build.BuildId)
+- task: VSBuild@1
+  inputs:
+    solution: '$(solution)'
+    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactStagingDirectory)"'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+- task: VSTest@2
+  inputs:
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
