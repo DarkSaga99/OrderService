@@ -5,6 +5,7 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
+  # El comodín **/*.sln ahora sí funcionará porque usamos la Task oficial
   solution: '**/*.sln'
   buildConfiguration: 'Release'
 
@@ -19,13 +20,20 @@ stages:
       inputs:
         version: '8.x'
 
-    - script: dotnet restore $(solution)
+    # Esta tarea es la que hace que "sí funcione" el buscador de archivos
+    - task: DotNetCoreCLI@2
       displayName: 'Restaurar dependencias'
+      inputs:
+        command: 'restore'
+        projects: '$(solution)'
 
-    - script: dotnet build $(solution) --configuration $(buildConfiguration)
+    - task: DotNetCoreCLI@2
       displayName: 'Compilar Solución'
+      inputs:
+        command: 'build'
+        projects: '$(solution)'
+        arguments: '--configuration $(buildConfiguration)'
 
-    # AQUÍ SE EJECUTAN TUS 6 TESTS Y SE MIDE LA COBERTURA
     - task: DotNetCoreCLI@2
       displayName: 'Ejecutar Unit Tests'
       inputs:
@@ -50,11 +58,10 @@ stages:
   condition: succeeded()
   jobs:
   - deployment: DeployJob
-    # ESTO ACTIVA LA APROBACIÓN MANUAL QUE CONFIGURASTE
     environment: 'Produccion' 
     strategy:
       runOnce:
         deploy:
           steps:
           - checkout: none
-          - script: echo "Desplegando OrderService en .NET 8..."
+          - script: echo "Desplegando OrderService..."
