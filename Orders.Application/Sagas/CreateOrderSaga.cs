@@ -30,16 +30,16 @@ public class CreateOrderSaga
         await _repository.AddAsync(order);
 
 
-        try
-        {
-            await _paymentService.ChargeAsync(order.Id, order.Total);
-        }
-        catch
-        {
-            // Compensación (SAGA)
-            await _paymentService.RefundAsync(order.Id);
-            throw;
-        }
+        //try
+        //{
+        //    await _paymentService.ChargeAsync(order.Id, order.Total);
+        //}
+        //catch
+        //{
+        //    // Compensación (SAGA)
+        //    await _paymentService.RefundAsync(order.Id);
+        //    throw;
+        //}
 
 
         return order.Id;
